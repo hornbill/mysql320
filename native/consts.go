@@ -4,24 +4,31 @@ import "strconv"
 
 // Client caps - borrowed from GoMySQL
 const (
-	_CLIENT_LONG_PASSWORD    = 1 << iota // new more secure passwords
-	_CLIENT_FOUND_ROWS                   // Found instead of affected rows
-	_CLIENT_LONG_FLAG                    // Get all column flags
-	_CLIENT_CONNECT_WITH_DB              // One can specify db on connect
-	_CLIENT_NO_SCHEMA                    // Don't allow database.table.column
-	_CLIENT_COMPRESS                     // Can use compression protocol
-	_CLIENT_ODBC                         // Odbc client
-	_CLIENT_LOCAL_FILES                  // Can use LOAD DATA LOCAL
-	_CLIENT_IGNORE_SPACE                 // Ignore spaces before '('
-	_CLIENT_PROTOCOL_41                  // New 4.1 protocol
-	_CLIENT_INTERACTIVE                  // This is an interactive client
-	_CLIENT_SSL                          // Switch to SSL after handshake
-	_CLIENT_IGNORE_SIGPIPE               // IGNORE sigpipes
-	_CLIENT_TRANSACTIONS                 // Client knows about transactions
-	_CLIENT_RESERVED                     // Old flag for 4.1 protocol
-	_CLIENT_SECURE_CONN                  // New 4.1 authentication
-	_CLIENT_MULTI_STATEMENTS             // Enable/disable multi-stmt support
-	_CLIENT_MULTI_RESULTS                // Enable/disable multi-results
+	_CLIENT_LONG_PASSWORD                  = 1 << iota // new more secure passwords
+	_CLIENT_FOUND_ROWS                                 // Found instead of affected rows
+	_CLIENT_LONG_FLAG                                  // Get all column flags
+	_CLIENT_CONNECT_WITH_DB                            // One can specify db on connect
+	_CLIENT_NO_SCHEMA                                  // Don't allow database.table.column
+	_CLIENT_COMPRESS                                   // Can use compression protocol
+	_CLIENT_ODBC                                       // Odbc client
+	_CLIENT_LOCAL_FILES                                // Can use LOAD DATA LOCAL
+	_CLIENT_IGNORE_SPACE                               // Ignore spaces before '('
+	_CLIENT_PROTOCOL_41                                // New 4.1 protocol
+	_CLIENT_INTERACTIVE                                // This is an interactive client
+	_CLIENT_SSL                                        // Switch to SSL after handshake
+	_CLIENT_IGNORE_SIGPIPE                             // IGNORE sigpipes
+	_CLIENT_TRANSACTIONS                               // Client knows about transactions
+	_CLIENT_RESERVED                                   // Old flag for 4.1 protocol
+	_CLIENT_SECURE_CONN                                // New 4.1 authentication
+	_CLIENT_MULTI_STATEMENTS                           // Enable/disable multi-stmt support
+	_CLIENT_MULTI_RESULTS                              // Enable/disable multi-results for query
+	_CLIENT_PS_MULTI_RESULTS                           // Enable/disable multi-results for stmt
+	_CLIENT_PLUGIN_AUTH                                // Support pluggable authentication protocol
+	_CLIENT_CONNECT_ATTRS                              // permits connection attributes in HandshakeResponse41
+	_CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA             // understands length encoded integer for auth response data
+	_CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS               // can handle expired passwords
+	_CLIENT_SESSION_TRACK                              // send session state changes after ok packet
+	_CLIENT_DEPRECATE_EOF                              // can ok after resultset rows
 )
 
 // Commands - borrowed from GoMySQL

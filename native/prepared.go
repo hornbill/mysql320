@@ -1,8 +1,9 @@
 package native
 
 import (
-	"github.com/ziutek/mymysql/mysql"
 	"log"
+
+	"github.com/ziutek/mymysql/mysql"
 )
 
 type Stmt struct {
@@ -109,7 +110,7 @@ loop:
 		switch {
 		case pkt0 == 254:
 			// EOF packet
-			stmt.warning_count, stmt.status = my.getEofPacket(pr)
+			stmt.warning_count, stmt.status = my.getEOFPacket(pr)
 			stmt.my.status = stmt.status
 			return stmt
 
@@ -152,7 +153,7 @@ func (my *Conn) getPrepareOkPacket(pr *pktReader) (stmt *Stmt) {
 	}
 	pr.skipN(1)
 	stmt.warning_count = int(pr.readU16())
-	pr.checkEof()
+	pr.checkEOF()
 
 	if my.Debug {
 		log.Printf(tab8s+"ID=0x%x ParamCount=%d FieldsCount=%d WarnCount=%d",

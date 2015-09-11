@@ -3,9 +3,10 @@ package godrv
 import (
 	"database/sql"
 	"fmt"
-	"github.com/ziutek/mymysql/mysql"
 	"testing"
 	"time"
+
+	"github.com/ziutek/mymysql/mysql"
 )
 
 func init() {

@@ -2,9 +2,10 @@ package native
 
 import (
 	"bufio"
-	"github.com/ziutek/mymysql/mysql"
 	"io"
 	"io/ioutil"
+
+	"github.com/ziutek/mymysql/mysql"
 )
 
 type pktReader struct {
@@ -158,7 +159,7 @@ func (pr *pktReader) eof() bool {
 	return pr.remain == 0 && pr.last
 }
 
-func (pr *pktReader) checkEof() {
+func (pr *pktReader) checkEOF() {
 	if !pr.eof() {
 		panic(mysql.ErrPktLong)
 	}

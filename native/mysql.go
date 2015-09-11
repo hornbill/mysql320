@@ -4,21 +4,23 @@ package native
 import (
 	"bufio"
 	"fmt"
-	"github.com/ziutek/mymysql/mysql"
 	"io"
 	"net"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/ziutek/mymysql/mysql"
 )
 
 type serverInfo struct {
-	prot_ver byte
-	serv_ver []byte
-	thr_id   uint32
-	scramble [20]byte
-	caps     uint16
-	lang     byte
+	prot_ver       byte
+	serv_ver       []byte
+	thr_id         uint32
+	scramble       []byte
+	authPluginName []byte
+	caps           uint32
+	lang           byte
 }
 
 // MySQL connection handler
@@ -175,7 +177,8 @@ func (my *Conn) SetDialer(d mysql.Dialer) {
 	my.dialer = d
 }
 
-func (my *Conn) connect() (err error) {
+func (my *Conn) connect() error {
+	var err error
 	defer catchError(&err)
 
 	my.net_conn = nil
@@ -183,30 +186,28 @@ func (my *Conn) connect() (err error) {
 		my.net_conn, err = my.dialer(my.proto, my.laddr, my.raddr, my.timeout)
 		if err != nil {
 			my.net_conn = nil
-			return
+			return err
 		}
 	}
+
 	if my.net_conn == nil {
 		my.net_conn, err = DefaultDialer(my.proto, my.laddr, my.raddr, my.timeout)
 		if err != nil {
 			my.net_conn = nil
-			return
+			return err
 		}
 	}
+
 	my.rd = bufio.NewReader(my.net_conn)
 	my.wr = bufio.NewWriter(my.net_conn)
 
 	// Initialisation
 	my.init()
-	my.auth()
+	my.handshakeResponse320()
+
 	res := my.getResult(nil, nil)
 	if res == nil {
-		// Try old password
-		my.oldPasswd()
-		res = my.getResult(nil, nil)
-		if res == nil {
-			return mysql.ErrAuthentication
-		}
+		return mysql.ErrAuthentication
 	}
 
 	// Execute all registered commands
@@ -215,7 +216,6 @@ func (my *Conn) connect() (err error) {
 		my.sendCmdStr(_COM_QUERY, cmd)
 		// Get command response
 		res := my.getResponse()
-
 		// Read and discard all result rows
 		row := res.MakeRow()
 		for res != nil {
@@ -227,19 +227,20 @@ func (my *Conn) connect() (err error) {
 					if err == io.EOF {
 						break
 					} else if err != nil {
-						return
+						return err
 					}
+					fmt.Printf("%#v\n", row)
 				}
 			}
 
 			// Move to the next result
 			if res, err = res.nextResult(); err != nil {
-				return
+				return err
 			}
 		}
 	}
 
-	return
+	return err
 }
 
 // Establishes a connection with MySQL server version 4.1 or later.

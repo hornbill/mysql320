@@ -2,10 +2,11 @@ package native
 
 import (
 	"errors"
-	"github.com/ziutek/mymysql/mysql"
 	"log"
 	"math"
 	"strconv"
+
+	"github.com/ziutek/mymysql/mysql"
 )
 
 type Result struct {
@@ -74,6 +75,7 @@ func (res *Result) MakeRow() mysql.Row {
 
 func (my *Conn) getResult(res *Result, row mysql.Row) *Result {
 loop:
+
 	pr := my.newPktReader() // New reader for next packet
 	pkt0 := pr.readByte()
 
@@ -100,16 +102,17 @@ loop:
 		case pkt0 == 254:
 			// EOF packet (without body)
 			return nil
+		default:
 		}
 	} else {
 		switch {
 		case pkt0 == 254:
 			// EOF packet
-			res.warning_count, res.status = my.getEofPacket(pr)
+			res.warning_count, res.status = my.getEOFPacket(pr)
 			my.status = res.status
 			return res
 
-		case pkt0 > 0 && pkt0 < 251 && res.field_count < len(res.fields):
+		case pkt0 >= 0 && pkt0 < 251 && res.field_count < len(res.fields):
 			// Field packet
 			field := my.getFieldPacket(pr)
 			res.fields[res.field_count] = field
@@ -130,6 +133,8 @@ loop:
 				my.getTextRowPacket(pr, res, row)
 			}
 			return nil
+		default:
+
 		}
 	}
 	panic(mysql.ErrUnkResultPkt)
@@ -142,14 +147,27 @@ func (my *Conn) getOkPacket(pr *pktReader) (res *Result) {
 	res = new(Result)
 	res.status_only = true
 	res.my = my
+
 	// First byte was readed by getResult
 	res.affected_rows = pr.readLCB()
 	res.insert_id = pr.readLCB()
-	res.status = pr.readU16()
-	my.status = res.status
-	res.warning_count = int(pr.readU16())
-	res.message = pr.readAll()
-	pr.checkEof()
+
+	if my.info.caps&_CLIENT_PROTOCOL_41 != 0 {
+		res.status = pr.readU16()
+		my.status = res.status
+		res.warning_count = int(pr.readU16())
+	} else if my.info.caps&_CLIENT_TRANSACTIONS != 0 {
+		res.status = pr.readU16()
+		my.status = res.status
+	}
+
+	if my.info.caps&_CLIENT_SESSION_TRACK != 0 {
+		panic("ok packet setting not supported")
+	} else {
+		res.message = pr.readAll()
+	}
+
+	pr.checkEOF()
 
 	if my.Debug {
 		log.Printf(tab8s+"AffectedRows=%d InsertId=0x%x Status=0x%x "+
@@ -164,14 +182,20 @@ func (my *Conn) getErrorPacket(pr *pktReader) {
 	if my.Debug {
 		log.Printf("[%2d ->] Error packet:", my.seq-1)
 	}
+
 	var err mysql.Error
 	err.Code = pr.readU16()
-	if pr.readByte() != '#' {
-		panic(mysql.ErrPkt)
+
+	if my.info.caps&_CLIENT_PROTOCOL_41 != 0 {
+		if pr.readByte() != '#' {
+			panic(mysql.ErrPkt)
+		}
+		// SQL state
+		pr.skipN(5)
 	}
-	pr.skipN(5)
+
 	err.Msg = pr.readAll()
-	pr.checkEof()
+	pr.checkEOF()
 
 	if my.Debug {
 		log.Printf(tab8s+"code=0x%x msg=\"%s\"", err.Code, err.Msg)
@@ -179,7 +203,7 @@ func (my *Conn) getErrorPacket(pr *pktReader) {
 	panic(&err)
 }
 
-func (my *Conn) getEofPacket(pr *pktReader) (warn_count int, status uint16) {
+func (my *Conn) getEOFPacket(pr *pktReader) (warn_count int, status uint16) {
 	if my.Debug {
 		if pr.eof() {
 			log.Printf("[%2d ->] EOF packet without body", my.seq-1)
@@ -190,27 +214,33 @@ func (my *Conn) getEofPacket(pr *pktReader) (warn_count int, status uint16) {
 	if pr.eof() {
 		return
 	}
-	warn_count = int(pr.readU16())
-	if pr.eof() {
-		return
-	}
-	status = pr.readU16()
-	pr.checkEof()
 
-	if my.Debug {
-		log.Printf(tab8s+"WarningCount=%d Status=0x%x", warn_count, status)
+	if my.info.caps&_CLIENT_PROTOCOL_41 != 0 {
+		warn_count = int(pr.readU16())
+		if pr.eof() {
+			return
+		}
+		status = pr.readU16()
+
+		if my.Debug {
+			log.Printf(tab8s+"WarningCount=%d Status=0x%x", warn_count, status)
+		}
 	}
+
+	pr.checkEOF()
+
 	return
 }
 
 func (my *Conn) getResSetHeadPacket(pr *pktReader) (res *Result) {
+
 	if my.Debug {
 		log.Printf("[%2d ->] Result set header packet:", my.seq-1)
 	}
 	pr.unreadByte()
 
 	field_count := int(pr.readLCB())
-	pr.checkEof()
+	pr.checkEOF()
 
 	res = &Result{
 		my:     my,
@@ -224,13 +254,56 @@ func (my *Conn) getResSetHeadPacket(pr *pktReader) (res *Result) {
 	return
 }
 
-func (my *Conn) getFieldPacket(pr *pktReader) (field *mysql.Field) {
+func (my *Conn) getFieldPacket(pr *pktReader) *mysql.Field {
 	if my.Debug {
 		log.Printf("[%2d ->] Field packet:", my.seq-1)
 	}
 	pr.unreadByte()
 
-	field = new(mysql.Field)
+	var field *mysql.Field
+	if my.info.caps&_CLIENT_PROTOCOL_41 != 0 {
+		field = my.getFieldPacketColumnDefinition41(pr)
+	} else {
+		field = my.getFieldPacketColumnDefinition320(pr)
+	}
+
+	pr.checkEOF()
+
+	if my.Debug {
+		log.Printf(tab8s+"Name=\"%s\" Type=0x%x", field.Name, field.Type)
+	}
+
+	return field
+}
+
+func (my *Conn) getFieldPacketColumnDefinition320(pr *pktReader) *mysql.Field {
+
+	field := new(mysql.Field)
+
+	field.Table = string(pr.readBin())
+	field.Name = string(pr.readBin())
+
+	pr.skipN(1) // length of column_length field
+	field.DispLen = uint32(pr.readU24())
+
+	pr.skipN(1) // length of type field
+	field.Type = pr.readByte()
+
+	pr.skipN(1) // length of flags+decimal fields
+	if my.info.caps&_CLIENT_LONG_FLAG != 0 {
+		field.Flags = pr.readU16()
+	} else {
+		field.Flags = uint16(pr.readByte())
+	}
+
+	field.Scale = pr.readByte()
+
+	return field
+}
+
+func (my *Conn) getFieldPacketColumnDefinition41(pr *pktReader) *mysql.Field {
+
+	field := new(mysql.Field)
 	if my.fullFieldInfo {
 		field.Catalog = string(pr.readBin())
 		field.Db = string(pr.readBin())
@@ -255,12 +328,8 @@ func (my *Conn) getFieldPacket(pr *pktReader) (field *mysql.Field) {
 	field.Flags = pr.readU16()
 	field.Scale = pr.readByte()
 	pr.skipN(2)
-	pr.checkEof()
 
-	if my.Debug {
-		log.Printf(tab8s+"Name=\"%s\" Type=0x%x", field.Name, field.Type)
-	}
-	return
+	return field
 }
 
 func (my *Conn) getTextRowPacket(pr *pktReader, res *Result, row mysql.Row) {
@@ -277,7 +346,7 @@ func (my *Conn) getTextRowPacket(pr *pktReader, res *Result, row mysql.Row) {
 			row[ii] = bin
 		}
 	}
-	pr.checkEof()
+	pr.checkEOF()
 }
 
 func (my *Conn) getBinRowPacket(pr *pktReader, res *Result, row mysql.Row) {

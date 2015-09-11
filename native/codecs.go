@@ -2,9 +2,10 @@ package native
 
 import (
 	"bytes"
-	"github.com/ziutek/mymysql/mysql"
 	"io"
 	"time"
+
+	"github.com/ziutek/mymysql/mysql"
 )
 
 // Integers

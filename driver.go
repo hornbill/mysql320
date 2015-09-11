@@ -6,13 +6,14 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
-	"github.com/jnewmano/mysql320/native"
-	"github.com/ziutek/mymysql/mysql"
 	"io"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jnewmano/mysql320/native"
+	"github.com/ziutek/mymysql/mysql"
 )
 
 type conn struct {
@@ -27,9 +28,6 @@ type rowsRes struct {
 
 func errFilter(err error) error {
 	if err == io.ErrUnexpectedEOF {
-		return driver.ErrBadConn
-	}
-	if _, ok := err.(net.Error); ok {
 		return driver.ErrBadConn
 	}
 	return err
@@ -95,6 +93,7 @@ func (c conn) parseQuery(query string, args []driver.Value) (string, error) {
 }
 
 func (c conn) Exec(query string, args []driver.Value) (driver.Result, error) {
+
 	q, err := c.parseQuery(query, args)
 	if err != nil {
 		return nil, err
@@ -112,6 +111,7 @@ func (c conn) Exec(query string, args []driver.Value) (driver.Result, error) {
 var textQuery = mysql.Stmt(new(native.Stmt))
 
 func (c conn) Query(query string, args []driver.Value) (driver.Rows, error) {
+
 	q, err := c.parseQuery(query, args)
 	if err != nil {
 		return nil, err
@@ -143,6 +143,7 @@ func (s *stmt) run(args []driver.Value) (*rowsRes, error) {
 }
 
 func (c conn) Prepare(query string) (driver.Stmt, error) {
+
 	st, err := c.my.Prepare(query)
 	if err != nil {
 		return nil, errFilter(err)
@@ -322,6 +323,16 @@ func (d *Driver) Open(uri string) (driver.Conn, error) {
 		cfg.proto = p[0]
 		options := strings.Split(p[1], ",")
 		cfg.raddr = options[0]
+		// check for the por ton raddr, if it is missing, add it
+		_, _, err := net.SplitHostPort(cfg.raddr)
+		if err != nil {
+			if strings.HasPrefix(err.Error(), "missing port in address") {
+				cfg.raddr = cfg.raddr + ":3306"
+			} else {
+				return nil, err
+			}
+		}
+
 		for _, o := range options[1:] {
 			kv := strings.SplitN(o, "=", 2)
 			var k, v string
@@ -354,6 +365,8 @@ func (d *Driver) Open(uri string) (driver.Conn, error) {
 	cfg.db = dup[0]
 	cfg.user = dup[1]
 	cfg.passwd = dup[2]
+
+	fmt.Printf("%#v\n", cfg)
 
 	c := conn{mysql.New(
 		cfg.proto, cfg.laddr, cfg.raddr, cfg.user, cfg.passwd, cfg.db,
@@ -412,7 +425,7 @@ func SetDialer(dialer Dialer) {
 }
 
 func init() {
-	Register("SET NAMES utf8")
+	// Register(``)
 	sql.Register("mysql320", &d)
 }
 
