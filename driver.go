@@ -366,8 +366,6 @@ func (d *Driver) Open(uri string) (driver.Conn, error) {
 	cfg.user = dup[1]
 	cfg.passwd = dup[2]
 
-	fmt.Printf("%#v\n", cfg)
-
 	c := conn{mysql.New(
 		cfg.proto, cfg.laddr, cfg.raddr, cfg.user, cfg.passwd, cfg.db,
 	)}

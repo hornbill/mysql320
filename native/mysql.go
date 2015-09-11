@@ -203,7 +203,7 @@ func (my *Conn) connect() error {
 
 	// Initialisation
 	my.init()
-	my.handshakeResponse320()
+	my.handshakeResponse()
 
 	res := my.getResult(nil, nil)
 	if res == nil {
