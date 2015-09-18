@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ziutek/mymysql/mysql"
+	"github.com/jnewmano/mysql320/mysql"
 )
 
 var (

@@ -3,7 +3,7 @@ package native
 import (
 	"log"
 
-	"github.com/ziutek/mymysql/mysql"
+	"github.com/jnewmano/mysql320/mysql"
 )
 
 type Stmt struct {

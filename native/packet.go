@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/ziutek/mymysql/mysql"
+	"github.com/jnewmano/mysql320/mysql"
 )
 
 type pktReader struct {
