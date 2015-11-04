@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jnewmano/mysql/mysql"
+	"github.com/jnewmano/mysql320/mysql"
 )
 
 func init() {
