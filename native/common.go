@@ -11,7 +11,6 @@ func catchError(err *error) {
 	// print a stack trace
 
 	if pv := recover(); pv != nil {
-		panic(pv)
 
 		switch e := pv.(type) {
 		case runtime.Error:
