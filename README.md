@@ -5,10 +5,11 @@ For use with the built-in Go database/sql driver. The driver name is mysql320. I
 
 Connect string should be formatted as:
 
+```
 DBNAME/USER/PASSWD
 unix:SOCKPATH*DBNAME/USER/PASSWD
 unix:SOCKPATH,OPTIONS*DBNAME/USER/PASSWD
 tcp:ADDR*DBNAME/USER/PASSWD
 tcp:ADDR,OPTIONS*DBNAME/USER/PASSWD
 cloudsql:INSTANCE*DBNAME/USER/PASSWD
-
+```
