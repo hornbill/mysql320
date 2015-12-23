@@ -323,13 +323,16 @@ func (d *Driver) Open(uri string) (driver.Conn, error) {
 		cfg.proto = p[0]
 		options := strings.Split(p[1], ",")
 		cfg.raddr = options[0]
-		// check for the por ton raddr, if it is missing, add it
-		_, _, err := net.SplitHostPort(cfg.raddr)
-		if err != nil {
-			if strings.HasPrefix(err.Error(), "missing port in address") {
-				cfg.raddr = cfg.raddr + ":3306"
-			} else {
-				return nil, err
+
+		if cfg.proto == "tcp" {
+			// check for the port on raddr, if it is missing, add it
+			_, _, err := net.SplitHostPort(cfg.raddr)
+			if err != nil {
+				if strings.HasPrefix(err.Error(), "missing port in address") {
+					cfg.raddr = cfg.raddr + ":3306"
+				} else {
+					return nil, err
+				}
 			}
 		}
 

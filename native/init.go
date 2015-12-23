@@ -31,11 +31,6 @@ func (my *Conn) init() {
 			my.info.prot_ver, my.info.serv_ver, my.status,
 		)
 	}
-
-	if my.info.caps&_CLIENT_PROTOCOL_41 != 0 {
-		panic(fmt.Errorf("Client Protocol 41 is unsupported"))
-	}
-
 }
 
 func (my *Conn) handshakeV10(pr *pktReader) {
@@ -64,13 +59,15 @@ func (my *Conn) handshakeV10(pr *pktReader) {
 	if my.info.caps&_CLIENT_SECURE_CONN != 0 {
 
 		scrambleLen := byte(20)
-		if lenPluginAuth >= scrambleLen {
-			scrambleLen = lenPluginAuth
+		if lenPluginAuth-1 >= scrambleLen {
+			scrambleLen = lenPluginAuth - 1
 		}
 		newScramble := make([]byte, scrambleLen)
 		copy(newScramble, my.info.scramble)
 		my.info.scramble = newScramble
+
 		pr.readFull(my.info.scramble[8:scrambleLen])
+
 	}
 
 	if my.info.caps&_CLIENT_PLUGIN_AUTH != 0 {
@@ -111,6 +108,7 @@ func (my *Conn) handshakeResponse41() {
 			_CLIENT_MULTI_RESULTS)
 	// Reset flags not supported by server
 	flags &= uint32(my.info.caps) | 0xffff0000
+
 	scrPasswd := encryptedPasswd(my.passwd, my.info.scramble[:])
 	pay_len := 4 + 4 + 1 + 23 + len(my.user) + 1 + 1 + len(scrPasswd)
 	if len(my.dbname) > 0 {

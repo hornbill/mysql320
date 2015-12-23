@@ -245,6 +245,7 @@ func (my *Conn) connect() error {
 
 // Establishes a connection with MySQL server version 4.1 or later.
 func (my *Conn) Connect() (err error) {
+
 	if my.net_conn != nil {
 		return mysql.ErrAlredyConn
 	}
