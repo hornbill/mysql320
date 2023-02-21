@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jnewmano/mysql"
+	"github.com/go-sql-driver/mysql"
 )
 
 var (
